@@ -53,7 +53,7 @@ def main():
             st.progress((index + 1) / len(questions))
             
             st.write(f"**Definition:** <span style='color:blue; font-weight:bold;'>{q['Definition']}</span>", unsafe_allow_html=True)
-            st.write(f"**Example:** <span style='color:blue; font-weight:bold;'>{q['Example']}</span>", unsafe_allow_html=True)
+            st.write(f"**Example:** <span style='color:blue;'>{q['Example']}</span>", unsafe_allow_html=True)
             
             if st.button("答えを見る", key=f"show_answer_{index}"):
                 st.session_state["show_answer"] = True
