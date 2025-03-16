@@ -17,13 +17,12 @@ data = load_data()
 st.title("**語句のたしなみ**")
 
 # サイドバーで出題範囲を選択
-st.sidebar.header("出題範囲の選択")
+st.sidebar.header("出題内容の選択")
+game_mode = st.sidebar.radio("ゲームを選択", ["意味を答える", "言葉を答える"])
 category = st.sidebar.selectbox("カテゴリを選択", ["すべて"] + list(data["Category"].unique()))
 test_num = st.sidebar.selectbox("Test#を選択", ["すべて"] + list(data["Test#"].unique()))
 page_num = st.sidebar.selectbox("Page#を選択", ["すべて"] + list(data["Page#"].unique()))
 importance = st.sidebar.selectbox("重要度を選択", ["すべて"] + sorted(data["Importance"].unique()))
-
-game_mode = st.sidebar.radio("ゲームを選択", ["意味を答える", "言葉を答える"])
 question_count = st.sidebar.selectbox("出題数", ["すべて", 30, 20, 10, 5])
 
 if "game_started" not in st.session_state:
