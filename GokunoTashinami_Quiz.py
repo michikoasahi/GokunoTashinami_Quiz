@@ -104,7 +104,11 @@ if st.session_state.game_started:
         if st.session_state.mistakes:
             st.write("### ❌ 間違えた問題一覧")
             mistakes_df = pd.DataFrame(st.session_state.mistakes)
-            st.table(mistakes_df[['Word', 'Definition', 'Example', 'Importance', 'Category', 'Test#', 'Page#']])
+            
+            # 折り返しを防ぐためのスタイルを適用し、Wordを青字に
+            st.dataframe(mistakes_df[['Word', 'Definition', 'Example', 'Importance', 'Category', 'Test#', 'Page#']]
+                         .style.set_properties(**{'white-space': 'nowrap'})
+                         .set_properties(subset=['Word'], **{'color': 'blue'}))
             
             col1, col2 = st.columns(2)
             with col1:
