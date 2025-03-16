@@ -94,7 +94,7 @@ def main():
         if st.session_state.wrong_questions:
             st.write("### 間違えた問題一覧")
             wrong_df = pd.DataFrame(st.session_state.wrong_questions)
-            st.dataframe(wrong_df[["Word", "Example", "Definition", "Importance", "Category", "Test#", "Page#"]])
+            st.dataframe(wrong_df[["Word", "Definition", "Example", "Importance", "Category", "Test#", "Page#"]])
             
             col1, col2 = st.columns(2)
             if col1.button("Topページに戻る"):
