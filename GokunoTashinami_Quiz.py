@@ -2,115 +2,126 @@ import streamlit as st
 import pandas as pd
 import random
 
-# GoogleスプレッドシートのCSV形式のURL
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1Ep1NKToR7nQVrKfAdIz3f8Z75TJ70_7j/export?format=csv"
+# GoogleスプレッドシートのURL（CSV形式でエクスポートしたURLを使用）
+DATA_URL = "https://docs.google.com/spreadsheets/d/1Ep1NKToR7nQVrKfAdIz3f8Z75TJ70_7j/gviz/tq?tqx=out:csv"
 
 # データの読み込み
+@st.cache_data
 def load_data():
-    return pd.read_csv(SHEET_URL)
-
-# セッションの初期化
-def initialize_session():
-    if "index" not in st.session_state:
-        st.session_state.index = 0
-        st.session_state.correct = 0
-        st.session_state.wrong_questions = []
-        st.session_state.show_answer = False
-        st.session_state.filtered_df = None
-
-def filter_questions(df, category, test_num, page_num, importance, question_count):
-    if category != "すべて":
-        df = df[df["Category"] == category]
-    if test_num != "すべて":
-        df = df[df["Test#"] == test_num]
-    if page_num != "すべて":
-        df = df[df["Page#"] == page_num]
-    if importance != "すべて":
-        df = df[df["Importance"] == importance]
-    
-    if question_count != "すべて":
-        df = df.sample(min(len(df), int(question_count)))
-    else:
-        df = df.sample(frac=1).reset_index(drop=True)
-    
+    df = pd.read_csv(DATA_URL)
     return df
 
-def display_question(question, game_mode):
-    if game_mode == "意味を答える":
-        st.write("**言葉:**", f":blue[{question['Word']}]")
-        st.write("**例文:**", f":blue[{question['Example']}]")
+data = load_data()
+
+# Streamlit UI
+st.title("**語句のたしなみ**")
+
+# サイドバーで出題範囲を選択
+st.sidebar.header("出題範囲の選択")
+category = st.sidebar.selectbox("カテゴリを選択", ["すべて"] + list(data["Category"].unique()))
+test_num = st.sidebar.selectbox("Test#を選択", ["すべて"] + list(data["Test#"].unique()))
+page_num = st.sidebar.selectbox("Page#を選択", ["すべて"] + list(data["Page#"].unique()))
+importance = st.sidebar.selectbox("重要度を選択", ["すべて"] + sorted(data["Importance"].unique()))
+
+game_mode = st.sidebar.radio("ゲームを選択", ["意味を答える", "言葉を答える"])
+question_count = st.sidebar.selectbox("出題数", ["すべて", 30, 20, 10, 5])
+
+if "game_started" not in st.session_state:
+    st.session_state.game_started = False
+
+if st.sidebar.button("開始"):
+    # 出題範囲のフィルタリング
+    filtered_data = data.copy()
+    if category != "すべて":
+        filtered_data = filtered_data[filtered_data["Category"] == category]
+    if test_num != "すべて":
+        filtered_data = filtered_data[filtered_data["Test#"] == test_num]
+    if page_num != "すべて":
+        filtered_data = filtered_data[filtered_data["Page#"] == page_num]
+    if importance != "すべて":
+        filtered_data = filtered_data[filtered_data["Importance"] == importance]
+
+    # 出題数の設定
+    if question_count != "すべて":
+        filtered_data = filtered_data.sample(min(len(filtered_data), int(question_count)))
     else:
-        st.write("**意味:**", f":blue[{question['Definition']}]")
-        st.write("**例文:**", f":blue[{question['Example']}]")
+        filtered_data = filtered_data.sample(frac=1)  # シャッフル
 
-def main():
-    st.title("**語句のたしなみ**")
-    df = load_data()
-    initialize_session()
+    st.session_state.questions = filtered_data.to_dict(orient="records")
+    random.shuffle(st.session_state.questions)
+    st.session_state.current_question = 0
+    st.session_state.correct_count = 0
+    st.session_state.mistakes = []
+    st.session_state.show_answer = False
+    st.session_state.game_started = True
+    st.rerun()
 
-    st.sidebar.header("出題内容の選択")
-    game_mode = st.sidebar.radio("【ゲームを選択】", ["意味を答える", "言葉を答える"])
-    category = st.sidebar.selectbox("【カテゴリを選択】", ["すべて"] + list(df["Category"].unique()))
-    test_num = st.sidebar.selectbox("【Test#を選択】", ["すべて"] + list(df["Test#"].unique()))
-    page_num = st.sidebar.selectbox("【Page#を選択】", ["すべて"] + list(df["Page#"].unique()))
-    importance = st.sidebar.selectbox("【重要度を選択】", ["すべて"] + list(df["Importance"].unique()))
-    question_count = st.sidebar.radio("【出題数】", ["すべて", 30, 20, 10, 5])
+if st.session_state.game_started:
+    # 進行度バーの追加
+    total_questions = len(st.session_state.questions)
+    current_progress = st.session_state.current_question
+    st.progress(current_progress / total_questions if total_questions > 0 else 0)
+    st.markdown(f"**進行度: {current_progress}/{total_questions}**")
 
-    # サイドバーの変更を検知し、データを更新
-    st.session_state.filtered_df = filter_questions(df, category, test_num, page_num, importance, question_count)
-    
-    total_questions = len(st.session_state.filtered_df)
-
-    if st.session_state.index < total_questions:
-        question = st.session_state.filtered_df.iloc[st.session_state.index]
-        display_question(question, game_mode)
-
-        if st.button("答えを見る"):
-            st.session_state.show_answer = True
+    if st.session_state.current_question < total_questions:
+        row = st.session_state.questions[st.session_state.current_question]
+        
+        if game_mode == "意味を答える":
+            st.write("**言葉:**", f":blue[{row['Word']}]")
+            st.write("**例文:**", f":blue[{row['Example']}]")
+        else:
+            st.write("**意味:**", f":blue[{row['Definition']}]")
+            st.write("**例文:**", f":blue[{row['Example']}]")
+        
+        if not st.session_state.show_answer:
+            if st.button("🔍 答えを見る"):
+                st.session_state.show_answer = True
+                st.rerun()
         
         if st.session_state.show_answer:
-            answer = question['Definition'] if game_mode == "意味を答える" else question['Word']
-            st.write("**答え:**", f":blue[**{answer}**]")
-
-            col1, col2 = st.columns(2)
-            if col1.button("正解！"):
-                st.session_state.correct += 1
-                st.session_state.index += 1
-                st.session_state.show_answer = False
-                st.rerun()
-            if col2.button("不正解。。"):
-                st.session_state.wrong_questions.append(question)
-                st.session_state.index += 1
-                st.session_state.show_answer = False
-                st.rerun()
-        
-        st.progress(st.session_state.index / total_questions)
-        st.write(f"進行度: {st.session_state.index} / {total_questions} 問")
-    else:
-        correct_answers = st.session_state.correct
-        accuracy = (correct_answers / total_questions) * 100 if total_questions > 0 else 0
-        st.write(f"### :green[成績: {correct_answers} / {total_questions} 正解 ({accuracy:.2f}%)]")
-        
-        if st.session_state.wrong_questions:
-            st.write("### 間違えた問題一覧")
-            wrong_df = pd.DataFrame(st.session_state.wrong_questions)
-            st.dataframe(wrong_df[["Word", "Definition", "Example", "Importance", "Category", "Test#", "Page#"]])
+            st.write("**答え:**", f":blue[**{row['Definition'] if game_mode == '意味を答える' else row['Word']}**]")
             
             col1, col2 = st.columns(2)
-            if col1.button("Topページに戻る"):
-                st.session_state.index = 0
-                st.session_state.correct = 0
-                st.session_state.wrong_questions = []
-                st.session_state.show_answer = False
-                st.session_state.filtered_df = None
-                st.rerun()
-            if col2.button("復習モード"):
-                st.session_state.index = 0
-                st.session_state.correct = 0
-                st.session_state.filtered_df = pd.DataFrame(st.session_state.wrong_questions)
-                st.session_state.wrong_questions = []
-                st.session_state.show_answer = False
-                st.rerun()
+            with col1:
+                if st.button("✅ 正解！"):
+                    st.session_state.correct_count += 1
+                    st.session_state.current_question += 1
+                    st.session_state.show_answer = False
+                    st.rerun()
+            with col2:
+                if st.button("❌ 不正解。。"):
+                    st.session_state.mistakes.append(row)
+                    st.session_state.current_question += 1
+                    st.session_state.show_answer = False
+                    st.rerun()
 
-if __name__ == "__main__":
-    main()
+    else:
+        # 結果表示
+        correct = st.session_state.correct_count
+        accuracy = (correct / total_questions) * 100 if total_questions > 0 else 0
+        
+        st.markdown(f"### 🎯 成績: {correct} / {total_questions} 正解 ({accuracy:.2f}%)")
+        
+        if st.session_state.mistakes:
+            st.write("### ❌ 間違えた問題一覧")
+            mistakes_df = pd.DataFrame(st.session_state.mistakes)
+            st.table(mistakes_df[['Word', 'Definition', 'Example', 'Importance', 'Category', 'Test#', 'Page#']])
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔄 復習モード"):
+                    st.session_state.questions = st.session_state.mistakes
+                    st.session_state.current_question = 0
+                    st.session_state.correct_count = 0
+                    st.session_state.mistakes = []
+                    st.session_state.show_answer = False
+                    st.rerun()
+            with col2:
+                if st.button("🏠 Topページに戻る"):
+                    st.session_state.questions = []
+                    st.session_state.current_question = 0
+                    st.session_state.correct_count = 0
+                    st.session_state.mistakes = []
+                    st.session_state.show_answer = False
+                    st.session_state.game_started = False
+                    st.rerun()
