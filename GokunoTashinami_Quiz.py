@@ -29,9 +29,9 @@ def filter_questions(df, category, test_num, page_num, importance, question_coun
         df = df[df["Importance"] == importance]
     
     if question_count != "すべて":
-        df = df.sample(min(len(df), int(question_count)), random_state=42)
+        df = df.sample(min(len(df), int(question_count)))
     else:
-        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+        df = df.sample(frac=1).reset_index(drop=True)
     
     return df
 
