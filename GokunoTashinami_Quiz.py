@@ -99,7 +99,7 @@ if st.session_state.game_started:
         correct = st.session_state.correct_count
         accuracy = (correct / total_questions) * 100 if total_questions > 0 else 0
         
-        st.markdown(f"### 🎯 成績: {correct} / {total_questions} 正解 ({accuracy:.2f}%)")
+        st.markdown(f"### 🎯 <span style='color:green;'>成績: {correct} / {total_questions} 正解 ({accuracy:.2f}%)</span>", unsafe_allow_html=True)
         
         if st.session_state.mistakes:
             st.write("### ❌ 間違えた問題一覧")
